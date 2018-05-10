@@ -2,11 +2,11 @@
 #include <ESP8266WebServer.h>
 #include <ESP8266HTTPClient.h>
 
-const char* nodeId = "4";
-const char* ssid = "********";
-const char* password = "********";
-const char* serverURL = "http://192.168.1.39";
-const char* aliveRequestURL = "/core-rest-api/for-nodes/alive-request-from-node";
+const String nodeId = "4";
+const char* ssid = "";
+const char* password = "";
+const String serverURL = "http://192.168.1.129:8181";
+const String aliveRequestURL = "/core-rest-api/for-nodes/alive-request-from-node";
 
 ESP8266WebServer server(80);   //Web server object. Will be listening in port 80 (default for HTTP)
 
@@ -18,17 +18,17 @@ void setup() {
 
   while (WiFi.status() != WL_CONNECTED) { //Wait for connection
     delay(500);
-    Serial.println(“Waiting to connect…”);
+    Serial.println("Waiting to connect…");
   }
 
-  Serial.print(“IP address: “);
+  Serial.print("IP address: ");
   Serial.println(WiFi.localIP());  //Print the local IP to access the server
 
   sendAliveRequestToServer();
   
-  server.on(“/command-from-server”, handleRequestFromServer); //Associate the handler function to the path
+  server.on("/command-from-server", handleRequestFromServer); //Associate the handler function to the path
   server.begin();                                    //Start the server
-  Serial.println(“Server listening”);   
+  Serial.println("Server listening");   
 }
 
 void loop() {
@@ -36,19 +36,19 @@ void loop() {
 }
 
 void handleRequestFromServer() {
-  String message = “”;
+  String message = "";
 
-  if (server.arg(“switch”)== “”){     //Parameter not found
-    message = “Switch argument not found.”;
+  if (server.arg("switch")== ""){     //Parameter not found
+    message = "Switch argument not found.";
   } else {     //Parameter found
-    if(powerSocketSwitch(server.arg(“switch”)) == true){
-      message = "Switched successfully."
+    if(powerSocketSwitch(server.arg("switch")) == true){
+      message = "Switched successfully.";
     } else {
-      message = "Switched unsuccessfully. Command is not correct."
-    };    
+      message = "Switched unsuccessfully. Command is not correct.";
+    }    
   }
 
-  server.send(200, “text/plain”, message);    //Returns the HTTP response
+  server.send(200, "text/plain", message);    //Returns the HTTP response
 }
 
 boolean powerSocketSwitch(String command){
@@ -62,9 +62,10 @@ boolean powerSocketSwitch(String command){
   return false;
 }
 
-void sendAliveRequestToServer() {
+void sendAliveRequestToServer() { 
   if (WiFi.status() == WL_CONNECTED) { //Check WiFi connection status
- 
+    
+    Serial.println("send Alive Request To Server: " + serverURL + aliveRequestURL + "?id=" + nodeId);
     HTTPClient http;  //Declare an object of class HTTPClient
     http.begin(serverURL + aliveRequestURL + "?id=" + nodeId);  //Specify request destination
     int httpCode = http.GET();                                  //Send the request
@@ -75,6 +76,4 @@ void sendAliveRequestToServer() {
     }
     http.end();   //Close connection
   }
- }
- 
 }
