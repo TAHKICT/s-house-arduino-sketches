@@ -11,6 +11,8 @@ const char* aliveRequestURL = "/core-rest-api/for-nodes/alive-request-from-node"
 ESP8266WebServer server(80);   //Web server object. Will be listening in port 80 (default for HTTP)
 
 void setup() {
+  pinMode(2,OUTPUT);
+  
   Serial.begin(115200);
   WiFi.begin(ssid, password); //Connect to the WiFi network
 
@@ -24,7 +26,7 @@ void setup() {
 
   sendAliveRequestToServer();
   
-  server.on(“/command-from-server”, handleArgs); //Associate the handler function to the path
+  server.on(“/command-from-server”, handleRequestFromServer); //Associate the handler function to the path
   server.begin();                                    //Start the server
   Serial.println(“Server listening”);   
 }
@@ -33,17 +35,31 @@ void loop() {
   server.handleClient();    //Handling of incoming requests
 }
 
-void handleSpecificArg() {
+void handleRequestFromServer() {
   String message = “”;
 
   if (server.arg(“switch”)== “”){     //Parameter not found
-    message = “Switch argument not found”;
-  }else{     //Parameter found
-    message = “Temperature Argument = “;
-    message += server.arg(“Temperature”);     //Gets the value of the query parameter
+    message = “Switch argument not found.”;
+  } else {     //Parameter found
+    if(powerSocketSwitch(server.arg(“switch”)) == true){
+      message = "Switched successfully."
+    } else {
+      message = "Switched unsuccessfully. Command is not correct."
+    };    
   }
 
   server.send(200, “text/plain”, message);    //Returns the HTTP response
+}
+
+boolean powerSocketSwitch(String command){
+  if(command == "checked"){
+    digitalWrite(2, HIGH);
+    return true;
+  } else if(command == "unchecked"){
+    digitalWrite(2, LOW);
+    return true;
+  }
+  return false;
 }
 
 void sendAliveRequestToServer() {
