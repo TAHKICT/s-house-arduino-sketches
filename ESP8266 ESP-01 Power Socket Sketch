@@ -1,11 +1,18 @@
-include <ESP8266WiFi.h>            
+#include <ESP8266WiFi.h>            
 #include <ESP8266WebServer.h>
+#include <ESP8266HTTPClient.h>
+
+const char* nodeId = "4";
+const char* ssid = "********";
+const char* password = "********";
+const char* serverURL = "http://192.168.1.39";
+const char* aliveRequestURL = "/core-rest-api/for-nodes/alive-request-from-node";
 
 ESP8266WebServer server(80);   //Web server object. Will be listening in port 80 (default for HTTP)
 
 void setup() {
   Serial.begin(115200);
-  WiFi.begin(“YourSSID”, “YourPassword”); //Connect to the WiFi network
+  WiFi.begin(ssid, password); //Connect to the WiFi network
 
   while (WiFi.status() != WL_CONNECTED) { //Wait for connection
     delay(500);
@@ -15,8 +22,9 @@ void setup() {
   Serial.print(“IP address: “);
   Serial.println(WiFi.localIP());  //Print the local IP to access the server
 
-  server.on(“/incoming-command”, handleArgs); //Associate the handler function to the path
-
+  sendAliveRequestToServer();
+  
+  server.on(“/command-from-server”, handleArgs); //Associate the handler function to the path
   server.begin();                                    //Start the server
   Serial.println(“Server listening”);   
 }
@@ -35,5 +43,22 @@ void handleSpecificArg() {
     message += server.arg(“Temperature”);     //Gets the value of the query parameter
   }
 
-  server.send(200, “text/plain”, message);          //Returns the HTTP response
+  server.send(200, “text/plain”, message);    //Returns the HTTP response
+}
+
+void sendAliveRequestToServer() {
+  if (WiFi.status() == WL_CONNECTED) { //Check WiFi connection status
+ 
+    HTTPClient http;  //Declare an object of class HTTPClient
+    http.begin(serverURL + aliveRequestURL + "?id=" + nodeId);  //Specify request destination
+    int httpCode = http.GET();                                  //Send the request
+ 
+    if (httpCode > 0) { //Check the returning code
+      String payload = http.getString();   //Get the request response payload
+      Serial.println(payload);                     //Print the response payload
+    }
+    http.end();   //Close connection
+  }
+ }
+ 
 }
