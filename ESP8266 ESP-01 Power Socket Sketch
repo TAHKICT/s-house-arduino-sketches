@@ -1,0 +1,39 @@
+include <ESP8266WiFi.h>            
+#include <ESP8266WebServer.h>
+
+ESP8266WebServer server(80);   //Web server object. Will be listening in port 80 (default for HTTP)
+
+void setup() {
+  Serial.begin(115200);
+  WiFi.begin(“YourSSID”, “YourPassword”); //Connect to the WiFi network
+
+  while (WiFi.status() != WL_CONNECTED) { //Wait for connection
+    delay(500);
+    Serial.println(“Waiting to connect…”);
+  }
+
+  Serial.print(“IP address: “);
+  Serial.println(WiFi.localIP());  //Print the local IP to access the server
+
+  server.on(“/incoming-command”, handleArgs); //Associate the handler function to the path
+
+  server.begin();                                    //Start the server
+  Serial.println(“Server listening”);   
+}
+
+void loop() {
+  server.handleClient();    //Handling of incoming requests
+}
+
+void handleSpecificArg() {
+  String message = “”;
+
+  if (server.arg(“switch”)== “”){     //Parameter not found
+    message = “Switch argument not found”;
+  }else{     //Parameter found
+    message = “Temperature Argument = “;
+    message += server.arg(“Temperature”);     //Gets the value of the query parameter
+  }
+
+  server.send(200, “text/plain”, message);          //Returns the HTTP response
+}
