@@ -3,10 +3,10 @@
 #include <ESP8266HTTPClient.h>
 
 const String nodeId = "4";
-const char* ssid = "";
+const char* ssid = "Scirocco_Home";
 const char* password = "";
 const String serverURL = "http://192.168.1.129:8181";
-const String aliveRequestURL = "/core-rest-api/for-nodes/alive-request-from-node";
+const String aliveRequestURL = "/core-rest-api/wifi-communicator/power-socket";
 
 ESP8266WebServer server(80);   //Web server object. Will be listening in port 80 (default for HTTP)
 
@@ -37,25 +37,30 @@ void loop() {
 
 void handleRequestFromServer() {
   String message = "";
+  String switched = "";
 
-  if (server.arg("switch")== ""){     //Parameter not found
+  if (server.arg("switch") == ""){     //Parameter not found
     message = "Switch argument not found.";
   } else {     //Parameter found
     if(powerSocketSwitch(server.arg("switch")) == true){
       message = "Switched successfully.";
+      switched = "on";
     } else {
       message = "Switched unsuccessfully. Command is not correct.";
+      switched = "off";
     }    
   }
 
   server.send(200, "text/plain", message);    //Returns the HTTP response
+
+  sendExecutionStatusRequestToServer(server.arg("request_id"), "executed", switched);
 }
 
 boolean powerSocketSwitch(String command){
-  if(command == "checked"){
+  if(command == "false"){
     digitalWrite(2, HIGH);
     return true;
-  } else if(command == "unchecked"){
+  } else if(command == "true"){
     digitalWrite(2, LOW);
     return true;
   }
@@ -65,9 +70,25 @@ boolean powerSocketSwitch(String command){
 void sendAliveRequestToServer() { 
   if (WiFi.status() == WL_CONNECTED) { //Check WiFi connection status
     
-    Serial.println("send Alive Request To Server: " + serverURL + aliveRequestURL + "?id=" + nodeId);
+    Serial.println("send Alive Request To Server: " + serverURL + aliveRequestURL + "?id=" + nodeId + "&requestId&nodeTaskStatus&switched");
     HTTPClient http;  //Declare an object of class HTTPClient
-    http.begin(serverURL + aliveRequestURL + "?id=" + nodeId);  //Specify request destination
+    http.begin(serverURL + aliveRequestURL + "?id=" + nodeId + "&requestId&nodeTaskStatus&switched");  //Specify request destination
+    int httpCode = http.GET();                                  //Send the request
+ 
+    if (httpCode > 0) { //Check the returning code
+      String payload = http.getString();   //Get the request response payload
+      Serial.println(payload);                     //Print the response payload
+    }
+    http.end();   //Close connection
+  }
+}
+
+void sendExecutionStatusRequestToServer(String requestId, String nodeTaskStatus, String switched) { 
+  if (WiFi.status() == WL_CONNECTED) { //Check WiFi connection status
+    
+    Serial.println("send Alive Request To Server: " + serverURL + aliveRequestURL + "?id=" + nodeId + "&requestId=" + requestId + "&nodeTaskStatus=" + nodeTaskStatus + "&switched=" + switched);
+    HTTPClient http;  //Declare an object of class HTTPClient
+    http.begin(serverURL + aliveRequestURL + "?id=" + nodeId + "&requestId=" + requestId + "&nodeTaskStatus=" + nodeTaskStatus + "&switched=" + switched);  //Specify request destination
     int httpCode = http.GET();                                  //Send the request
  
     if (httpCode > 0) { //Check the returning code
