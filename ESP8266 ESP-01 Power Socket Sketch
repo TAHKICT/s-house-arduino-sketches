@@ -9,7 +9,13 @@ const String nodeId = "4";
 const char* ssid = "Scirocco_Home";
 const char* password = "likenoother";
 const String serverURL = "http://192.168.1.129:8181";
-const String aliveRequestURL = "/core-rest-api/for-nodes/alive-request-from-node";
+const String requestURL = "/core-rest-api/wifi-communicator/power-socket";
+
+const String switchParam = "switch";
+const String switchValueOn = "checked";
+const String switchValueOff = "unchecked";
+
+String errorMessage;
 
 ESP8266WebServer server(80);   //Web server object. Will be listening in port 80 (default for HTTP)
 
@@ -35,31 +41,39 @@ void loop() {
 }
 
 void handleRequestFromServer() {
-  String message = "";
-
-  if (server.arg("switch")== ""){     //Parameter not found
-    message = "Switch argument not found.";
-  } else {     //Parameter found
-    if(powerSocketSwitch(server.arg("switch")) == true){
-      message = "Switched successfully.";
-    } else {
-      message = "Switched unsuccessfully. Command is not correct.";
-    }    
+  
+  boolean validRequest = isValidRequest();
+  if(!validRequest){  
+    server.send(200, "text/plain", "Request is not valid.");    //Returns the HTTP response 
+  }else{
+    server.send(200, "text/plain", "Request in process.");    //Returns the HTTP response 
+    
+    String command = server.arg("switch");
+    if(command == switchValueOn){
+      PowerOn = true;
+    }else if(command == switchValueOff){
+      PowerOn = false;
+    }
+    digitalWrite(PowerPin , PowerOn);
   }
-
-  server.send(200, "text/plain", message);    //Returns the HTTP response
 }
 
-boolean powerSocketSwitch(String command){
-  if(command == "unchecked"){
-    PowerOn = false;
-    digitalWrite(PowerPin , PowerOn);
-    return true;
-  } else if(command == "checked"){
-    PowerOn = true;
-    digitalWrite(PowerPin , PowerOn);
+boolean isValidRequest(){
+  String command = server.arg("switch");
+
+  if (command != NULL && command != "" && (command == switchValueOn || command == switchValueOff)){
+    errorMessage = "";
     return true;
   }
+  
+  if (command == NULL){
+    errorMessage = "Switch value is null.";
+  }else if(command == ""){
+    errorMessage = "Switch value is empty.";
+  }else{
+    errorMessage = "Switch value is not correct.";
+  }
+
   return false;
 }
 
@@ -67,7 +81,7 @@ void sendAliveRequestToServer() {
   if (WiFi.status() == WL_CONNECTED) { //Check WiFi connection status
     
     HTTPClient http;  //Declare an object of class HTTPClient
-    http.begin(serverURL + aliveRequestURL + "?id=" + nodeId);  //Specify request destination
+    http.begin(serverURL + requestURL + "?id=" + nodeId + "&requestId&nodeTaskStatus&switched");  //Specify request destination
     int httpCode = http.GET();                                  //Send the request
  
     if (httpCode > 0) { //Check the returning code
