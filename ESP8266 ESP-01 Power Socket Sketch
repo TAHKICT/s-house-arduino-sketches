@@ -5,7 +5,7 @@
 uint8_t PowerPin = 2;     //GPIO of relay
 bool    PowerOn  = false; //current state of relay
 
-const String nodeId = "4";
+const String nodeId = "1";
 const char* ssid = "Scirocco_Home";
 const char* password = "*********";
 const String serverURL = "http://192.168.1.129:8181";
