@@ -7,7 +7,7 @@ bool    PowerOn  = false; //current state of relay
 
 const String nodeId = "1";
 const char* ssid = "Scirocco_Home";
-const char* password = "*********";
+const char* password = "*";
 const String serverURL = "http://192.168.1.129:8181";
 const String requestURL = "/core-rest-api/wifi-communicator/power-socket";
 
@@ -83,7 +83,7 @@ void sendRequestToServer(boolean isAlive, String requestId, String nodeTaskStatu
     
     HTTPClient http;  //Declare an object of class HTTPClient
     if(isAlive == true){
-      http.begin(serverURL + requestURL + "?id=" + nodeId + "&requestId&nodeTaskStatus&switched");  //Specify request destination
+      http.begin(serverURL + requestURL + "/alive?id=" + nodeId);  //Specify request destination
     }else{
       http.begin(serverURL + requestURL + "?id=" + nodeId + "&requestId="+ requestId + "&nodeTaskStatus=" + nodeTaskStatus +"&switched=" + switched);  //Specify request destination
     }
