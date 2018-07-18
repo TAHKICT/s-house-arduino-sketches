@@ -7,7 +7,7 @@ bool    PowerOn  = false; //current state of relay
 
 const String nodeId = "4";
 const char* ssid = "Scirocco_Home";
-const char* password = "likenoother";
+const char* password = "*********";
 const String serverURL = "http://192.168.1.129:8181";
 const String requestURL = "/core-rest-api/wifi-communicator/power-socket";
 
@@ -30,7 +30,7 @@ void setup() {
     delay(500);
   }
 
-  sendAliveRequestToServer();
+  sendRequestToServer(true, "", "", false) //send alive request to server
   
   server.on("/command-from-server", handleRequestFromServer); //Associate the handler function to the path
   server.begin();                                    //Start the server
@@ -55,6 +55,7 @@ void handleRequestFromServer() {
       PowerOn = false;
     }
     digitalWrite(PowerPin , PowerOn);
+    sendRequestToServer(false, server.arg("requestId"), "executed", PowerOn)
   }
 }
 
@@ -77,11 +78,15 @@ boolean isValidRequest(){
   return false;
 }
 
-void sendAliveRequestToServer() { 
+void sendRequestToServer(boolean isAlive, String requestId, String nodeTaskStatus, boolean switched){
   if (WiFi.status() == WL_CONNECTED) { //Check WiFi connection status
     
     HTTPClient http;  //Declare an object of class HTTPClient
-    http.begin(serverURL + requestURL + "?id=" + nodeId + "&requestId&nodeTaskStatus&switched");  //Specify request destination
+    if(isAlive == true){
+      http.begin(serverURL + requestURL + "?id=" + nodeId + "&requestId&nodeTaskStatus&switched");  //Specify request destination
+    }else{
+      http.begin(serverURL + requestURL + "?id=" + nodeId + "&requestId="+ requestId + "&nodeTaskStatus=" + nodeTaskStatus +"&switched=" + switched);  //Specify request destination
+    }
     int httpCode = http.GET();                                  //Send the request
  
     if (httpCode > 0) { //Check the returning code
