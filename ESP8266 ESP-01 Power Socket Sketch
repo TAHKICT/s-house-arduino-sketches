@@ -7,7 +7,7 @@ bool    PowerOn  = false; //current state of relay
 
 const String nodeId = "1";
 const char* ssid = "Scirocco_Home";
-const char* password = "likenoother";
+const char* password = "*";
 const String serverURL = "http://192.168.1.129:8181";
 const String requestURL = "/core-rest-api/wifi-communicator/power-socket";
 
