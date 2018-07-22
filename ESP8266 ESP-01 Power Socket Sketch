@@ -7,13 +7,13 @@ bool    PowerOn  = false; //current state of relay
 
 const String nodeId = "1";
 const char* ssid = "Scirocco_Home";
-const char* password = "*";
+const char* password = "likenoother";
 const String serverURL = "http://192.168.1.129:8181";
 const String requestURL = "/core-rest-api/wifi-communicator/power-socket";
 
 const String switchParam = "switch";
-const String switchValueOn = "checked";
-const String switchValueOff = "unchecked";
+const String switchValueOn = "true";
+const String switchValueOff = "false";
 
 String errorMessage;
 
@@ -30,7 +30,7 @@ void setup() {
     delay(500);
   }
 
-  sendRequestToServer(true, "", "", false) //send alive request to server
+  sendRequestToServer(true, "", "", false); //send alive request to server
   
   server.on("/command-from-server", handleRequestFromServer); //Associate the handler function to the path
   server.begin();                                    //Start the server
@@ -55,7 +55,7 @@ void handleRequestFromServer() {
       PowerOn = false;
     }
     digitalWrite(PowerPin , PowerOn);
-    sendRequestToServer(false, server.arg("requestId"), "executed", PowerOn)
+    sendRequestToServer(false, server.arg("requestId"), "executed", PowerOn);
   }
 }
 
