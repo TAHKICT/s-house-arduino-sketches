@@ -41,6 +41,7 @@ void setup() {
 
 void loop() {
   server.handleClient();    //Handling of incoming requests
+  sendAliveRequestToServer(); //send alive request logic
   
   if(digitalRead(HallPin))
   {
