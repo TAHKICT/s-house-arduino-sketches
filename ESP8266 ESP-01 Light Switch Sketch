@@ -2,8 +2,10 @@
 #include <ESP8266WebServer.h>
 #include <ESP8266HTTPClient.h>
 
-uint8_t PowerPin = 2;     //GPIO of relay
+uint8_t PowerPin = 0;
+uint8_t HallPin = 2;     
 bool    PowerOn  = false; //current state of relay
+long    aliveRequestPeriodDurationInSec = 50;
 
 const String nodeId = "2";
 const char* ssid = "Scirocco_Home";
@@ -22,6 +24,7 @@ ESP8266WebServer server(80);   //Web server object. Will be listening in port 80
 void setup() {
   // Initializing the relay control port
   pinMode(PowerPin , OUTPUT);
+  pinMode(HallPin, INPUT);
   digitalWrite(PowerPin , PowerOn);
   
   WiFi.begin(ssid, password); //Connect to the WiFi network
@@ -38,6 +41,24 @@ void setup() {
 
 void loop() {
   server.handleClient();    //Handling of incoming requests
+  
+  if(digitalRead(HallPin))
+  {
+//    <h2>Ручний режим: ВИМКНЕНО<h2>\
+    if(PowerOn != false){
+      PowerOn = false;
+      sendRequestToServer(false, PowerOn);
+    }
+  }
+  else
+  {
+//    <h2> Ручний режим: УВІМКНЕНО<h2>\
+    if(PowerOn != true){
+      PowerOn = true;
+      sendRequestToServer(false, PowerOn);
+    }
+  }
+
 }
 
 void handleRequestFromServer() {
@@ -57,6 +78,7 @@ void handleRequestFromServer() {
     digitalWrite(PowerPin , PowerOn);
     sendRequestToServer(false, server.arg("requestId"), "executed", PowerOn);
   }
+  
 }
 
 boolean isValidRequest(){
@@ -78,13 +100,13 @@ boolean isValidRequest(){
   return false;
 }
 
-void sendRequestToServer(boolean isAlive, String requestId, String nodeTaskStatus, boolean switched){
+void sendRequestToServer(boolean isAlive, boolean switched){
   if (WiFi.status() == WL_CONNECTED) { //Check WiFi connection status
     HTTPClient http;  //Declare an object of class HTTPClient
     if(isAlive == true){
       http.begin(serverURL + requestURL + "/alive?id=" + nodeId);  //Specify request destination
     }else{
-      http.begin(serverURL + requestURL + "?id=" + nodeId +"&switched=" + switched);  //Specify request destination
+      http.begin(serverURL + requestURL + "?id=" + nodeId +"&switched=" + switched + "&nodeTypeName=LightSwitchNode");  //Specify request destination
     }
     int httpCode = http.GET();                                  //Send the request
  
@@ -93,4 +115,15 @@ void sendRequestToServer(boolean isAlive, String requestId, String nodeTaskStatu
     }
     http.end();   //Close connection
   }
+}
+
+void sendAliveRequestToServer(){
+  const unsigned long period = aliveRequestPeriodDurationInSec * 1000UL;
+  static unsigned long lastSampleTime = 0 - period;  // initialize such that a reading is due the first time through loop()
+
+ unsigned long now = millis();
+ if (now - lastSampleTime >= period){
+    lastSampleTime += period;
+    sendRequestToServer(true,true);
+ }
 }
