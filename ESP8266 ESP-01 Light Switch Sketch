@@ -1,0 +1,96 @@
+#include <ESP8266WiFi.h>            
+#include <ESP8266WebServer.h>
+#include <ESP8266HTTPClient.h>
+
+uint8_t PowerPin = 2;     //GPIO of relay
+bool    PowerOn  = false; //current state of relay
+
+const String nodeId = "1";
+const char* ssid = "Scirocco_Home";
+const char* password = "*";
+const String serverURL = "http://192.168.1.129:8181";
+const String requestURL = "/core-rest-api/wifi-communicator/power-socket";
+
+const String switchParam = "switch";
+const String switchValueOn = "true";
+const String switchValueOff = "false";
+
+String errorMessage;
+
+ESP8266WebServer server(80);   //Web server object. Will be listening in port 80 (default for HTTP)
+
+void setup() {
+  // Initializing the relay control port
+  pinMode(PowerPin , OUTPUT);
+  digitalWrite(PowerPin , PowerOn);
+  
+  WiFi.begin(ssid, password); //Connect to the WiFi network
+
+  while (WiFi.status() != WL_CONNECTED) { //Wait for connection
+    delay(500);
+  }
+
+  sendRequestToServer(true, "", "", false); //send alive request to server
+  
+  server.on("/command-from-server", handleRequestFromServer); //Associate the handler function to the path
+  server.begin();                                    //Start the server
+}
+
+void loop() {
+  server.handleClient();    //Handling of incoming requests
+}
+
+void handleRequestFromServer() {
+  
+  boolean validRequest = isValidRequest();
+  if(!validRequest){  
+    server.send(200, "text/plain", "Request is not valid.");    //Returns the HTTP response 
+  }else{
+    server.send(200, "text/plain", "Request in process.");    //Returns the HTTP response 
+    
+    String command = server.arg("switch");
+    if(command == switchValueOn){
+      PowerOn = true;
+    }else if(command == switchValueOff){
+      PowerOn = false;
+    }
+    digitalWrite(PowerPin , PowerOn);
+    sendRequestToServer(false, server.arg("requestId"), "executed", PowerOn);
+  }
+}
+
+boolean isValidRequest(){
+  String command = server.arg("switch");
+
+  if (command != NULL && command != "" && (command == switchValueOn || command == switchValueOff)){
+    errorMessage = "";
+    return true;
+  }
+  
+  if (command == NULL){
+    errorMessage = "Switch value is null.";
+  }else if(command == ""){
+    errorMessage = "Switch value is empty.";
+  }else{
+    errorMessage = "Switch value is not correct.";
+  }
+
+  return false;
+}
+
+void sendRequestToServer(boolean isAlive, String requestId, String nodeTaskStatus, boolean switched){
+  if (WiFi.status() == WL_CONNECTED) { //Check WiFi connection status
+    HTTPClient http;  //Declare an object of class HTTPClient
+    if(isAlive == true){
+      http.begin(serverURL + requestURL + "/alive?id=" + nodeId);  //Specify request destination
+    }else{
+      http.begin(serverURL + requestURL + "?id=" + nodeId +"&switched=" + switched);  //Specify request destination
+    }
+    int httpCode = http.GET();                                  //Send the request
+ 
+    if (httpCode > 0) { //Check the returning code
+      String payload = http.getString();   //Get the request response payload
+    }
+    http.end();   //Close connection
+  }
+}
