@@ -5,12 +5,13 @@
 uint8_t PowerPin = 0;
 uint8_t HallPin = 2;     
 bool    PowerOn  = false; //current state of relay
+bool    hallState = false;
 long    aliveRequestPeriodDurationInSec = 50;
 
 const String nodeId = "2";
 const char* ssid = "Scirocco_Home";
-const char* password = "*";
-const String serverURL = "http://192.168.1.130:8181";
+const char* password = "likenoother";
+const String serverURL = "http://192.168.1.111:8181";
 const String requestURL = "/core-rest-api/communicator";
 
 const String switchParam = "switch";
@@ -42,22 +43,16 @@ void setup() {
 void loop() {
   server.handleClient();    //Handling of incoming requests
   sendAliveRequestToServer(); //send alive request logic
-  
-  if(digitalRead(HallPin))
-  {
-//    <h2>Ручний режим: ВИМКНЕНО<h2>\
-    if(PowerOn != false){
-      PowerOn = false;
-      sendRequestToServer(false, PowerOn);
-  }
-  else
-  {
-//    <h2> Ручний режим: УВІМКНЕНО<h2>\
-    if(PowerOn != true){
-      PowerOn = true;
-      sendRequestToServer(false, PowerOn);
-    }
+  handleHallState(digitalRead(HallPin));
+}
 
+void handleHallState(bool currentHallState){
+  if(currentHallState != hallState){ //light switch state changed
+    hallState = currentHallState;
+    PowerOn = !PowerOn;
+    digitalWrite(PowerPin , PowerOn);
+    sendRequestToServer(false, PowerOn);
+  }
 }
 
 void handleRequestFromServer() {
@@ -103,7 +98,7 @@ void sendRequestToServer(boolean isAlive, boolean switched){
   if (WiFi.status() == WL_CONNECTED) { //Check WiFi connection status
     HTTPClient http;  //Declare an object of class HTTPClient
     if(isAlive == true){
-      http.begin(serverURL + requestURL + "/alive?id=" + nodeId);  //Specify request destination
+      http.begin(serverURL + requestURL + "?alive&id=" + nodeId + "&nodeTypeName=LightSwitchNode");  //Specify request destination
     }else{
       http.begin(serverURL + requestURL + "?id=" + nodeId +"&switched=" + switched + "&nodeTypeName=LightSwitchNode");  //Specify request destination
     }
